@@ -1,7 +1,9 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-#define LED 16  // GPIO 5 (D1) for LED
+int LED1 = 0; // (D3)
+int LED2 = 2; // (D4)
+int LED3 = 14; // (D5)
 bool ledState = false;
 
 // WiFi settings
@@ -23,7 +25,10 @@ void connectToMQTTBroker();
 void mqttCallback(char *topic, byte *payload, unsigned int length);
 
 void setup() {
-  pinMode(LED, OUTPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
   Serial.begin(115200);
   connectToWiFi();
   mqtt_client.setServer(mqtt_broker, mqtt_port);
@@ -70,18 +75,75 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
   }
     
   // Control the LED based on the message received
-  if (message == "on" && !ledState) {
-    digitalWrite(LED, HIGH);  // Turn on the LED
+  if (message == "ON1") {
+    digitalWrite(LED1, HIGH);  // Turn on 1 LED
+    digitalWrite(LED2, LOW); 
+    digitalWrite(LED3, LOW);
     ledState = true;
-    Serial.println("LED is turned on");
+    Serial.println("1 LED turned on");
   }
-  if (message == "off" && ledState) {
+
+  if (message == "ON2") {
+    digitalWrite(LED1, HIGH);  // Turn on 2 LED
+    digitalWrite(LED2, HIGH); 
+    digitalWrite(LED3, LOW);
+    ledState = true;
+    Serial.println("2 LEDs turned on");
+  }
+
+  
+  if (message == "ON3") {
+    digitalWrite(LED1, HIGH);  // Turn on 2 LED
+    digitalWrite(LED2, HIGH); 
+    digitalWrite(LED3, HIGH);
+    ledState = true;
+    Serial.println("3 LEDs turned on");
+  }
+  
+  if (message == "OFF" && ledState) {
     digitalWrite(LED, LOW);  // Turn off the LED
     ledState = false;
-    Serial.println("LED is turned off");
+    Serial.println("LEDs turned off");
   }
   Serial.println();
   Serial.println("-----------------------");
+}
+
+void mqttPublish(){
+  // Read from DHT sensor
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  // Create json
+  StaticJsonDocument<200> tempDoc;
+  tempDoc["msg"] = t;
+  tempDoc["type"] = "temperature";
+  char tempBuffer[512];
+  serializeJson(tempDoc, tempBuffer);
+
+  StaticJsonDocument<200> humDoc;
+  humDoc["msg"] = h;
+  humDoc["type"] = "humidity";
+  char humBuffer[512];
+  serializeJson(humDoc, humBuffer);
+
+  // Print and publish the temperature data
+  Serial.print("Publishing temperature data: ");
+  Serial.println(tempBuffer);
+  client.publish(mqtt_topic, tempBuffer);
+  
+  // Print and publish the humidity data
+  Serial.print("Publishing humidity data: ");
+  Serial.println(humBuffer);
+  client.publish(mqtt_topic, humBuffer);
+  
+  // Wait for a few seconds before publishing again
+  delay(5000);
 }
 
 void loop() {
@@ -89,4 +151,12 @@ void loop() {
     connectToMQTTBroker();
   }
   mqtt_client.loop();
+
+  // Read and publish sensor data every 10 seconds
+  static unsigned long lastPublishTime = 0;
+  unsigned long now = millis();
+  if (now - lastPublishTime > 10000) {
+    readAndPublishSensorData();
+    lastPublishTime = now;
+  }
 }
