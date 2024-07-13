@@ -1,9 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include <DFRobot_SHT20.h>
+#include <string>
 
-int LED1 = 0; // (D3)
-int LED2 = 2; // (D4)
-int LED3 = 14; // (D5)
+#define LED1 D1;
+#define LED23 D2;
+#define FOG1 D3;
+#define FOG23 D4;
+#define FUME D5;
 bool ledState = false;
 
 // WiFi settings
@@ -26,10 +31,19 @@ void mqttCallback(char *topic, byte *payload, unsigned int length);
 
 void setup() {
   pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
+  pinMode(LED23, OUTPUT);
+  pinMode(FOG1, OUTPUT);
+  pinMode(FOG23, OUTPUT);
+  pinMode(FUME, OUTPUT);
+    
+  // Set default state to off
   digitalWrite(LED1, LOW);
-  digitalWrite(LED2, LOW);
+  digitalWrite(LED23, LOW);
+  digitalWrite(FOG1, LOW);
+  digitalWrite(FOG23, LOW);
+  digitalWrite(FUME, LOW);
   Serial.begin(115200);
+  
   connectToWiFi();
   mqtt_client.setServer(mqtt_broker, mqtt_port);
   mqtt_client.setCallback(mqttCallback);
@@ -69,50 +83,88 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
   Serial.print("Message received on topic: ");
   Serial.println(topic);
   Serial.print("Message:");
-  String message;
-  for (int i = 0; i < length; i++) {
-    message += (char)payload[i];  // Convert *byte to string
-  }
-    
+  char msg[length +1];
+  strncpy(msg, (char*)payload, length);
+  msg[length] = '\0';
+
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, msg);
+
+  if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+        return;
+    }
+  String type = doc["type"].as<String>();
+  String message = doc["msg"].as<String>();
+
+  if (type == "fog") {
+        processFog(message);
+    } else if (type == "temperature") {
+        processTemperature(message);
+    } else if (type == "fume") {
+        processFume(message);
+    }
+}
+
+void processFog(const String message){
+  
   // Control the LED based on the message received
   if (message == "ON1") {
-    digitalWrite(LED1, HIGH);  // Turn on 1 LED
-    digitalWrite(LED2, LOW); 
-    digitalWrite(LED3, LOW);
-    ledState = true;
-    Serial.println("1 LED turned on");
+    digitalWrite(FOG1, HIGH);
+    digitalWrite(FOG23, LOW);
+  } else if (message == "ON2") {
+    digitalWrite(FOG1, LOW);
+    digitalWrite(FOG23, HIGH);
+  } else if (message == "ON3") {
+    digitalWrite(FOG1, HIGH);
+    digitalWrite(FOG23, HIGH);
+  } else {
+    digitalWrite(FOG1, LOW);
+    digitalWrite(FOG23, LOW);
   }
-
-  if (message == "ON2") {
-    digitalWrite(LED1, HIGH);  // Turn on 2 LED
-    digitalWrite(LED2, HIGH); 
-    digitalWrite(LED3, LOW);
-    ledState = true;
-    Serial.println("2 LEDs turned on");
-  }
-
+}
   
-  if (message == "ON3") {
-    digitalWrite(LED1, HIGH);  // Turn on 2 LED
-    digitalWrite(LED2, HIGH); 
-    digitalWrite(LED3, HIGH);
-    ledState = true;
-    Serial.println("3 LEDs turned on");
-  }
+void processTemperature(const String message){
   
-  if (message == "OFF" && ledState) {
-    digitalWrite(LED, LOW);  // Turn off the LED
-    ledState = false;
-    Serial.println("LEDs turned off");
+  // Control the LED based on the message received
+  if (message == "ON1") {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED23, LOW);
+  } else if (message == "ON2") {
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED23, HIGH);
+  } else if (message == "ON3") {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED23, HIGH);
+  } else {
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED23, LOW);
   }
-  Serial.println();
-  Serial.println("-----------------------");
+}
+
+void processFume(const String message) {
+  if (message == "ON1") {
+    digitalWrite(FUME, HIGH);
+    delay(5000);
+    digitalWrite(FUME, LOW);
+  } else if (message == "ON2") {
+      digitalWrite(FUME, HIGH);
+      delay(10000);
+      digitalWrite(FUME, LOW);
+  } else if (message == "ON3") {
+      digitalWrite(FUME, HIGH);
+      delay(15000);
+      digitalWrite(FUME, LOW);
+  } else {
+      digitalWrite(FUME, LOW);
+  }
 }
 
 void mqttPublish(){
-  // Read from DHT sensor
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
+  // Read from sht sensor
+  float t = sht20.readTemperature();
+  float h = sht20.readHumidity();
 
   if (isnan(h) || isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
