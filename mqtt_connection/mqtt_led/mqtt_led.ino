@@ -4,11 +4,14 @@
 #include <DFRobot_SHT20.h>
 #include <string>
 
+
 #define LED1 D1;
 #define LED23 D2;
 #define FOG1 D3;
 #define FOG23 D4;
 #define FUME D5;
+
+#define RECV_PIN D6;
 
 
 // WiFi settings
@@ -42,7 +45,7 @@ void setup() {
   digitalWrite(FOG1, LOW);
   digitalWrite(FOG23, LOW);
   digitalWrite(FUME, LOW);
-  Serial.begin(115200);
+  Serial.begin(9600);
   
   connectToWiFi();
   mqtt_client.setServer(mqtt_broker, mqtt_port);
