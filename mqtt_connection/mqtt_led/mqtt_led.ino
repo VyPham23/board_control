@@ -9,7 +9,7 @@
 #define FOG1 D3;
 #define FOG23 D4;
 #define FUME D5;
-bool ledState = false;
+
 
 // WiFi settings
 const char *ssid = "Thanh Hai t2";
@@ -208,7 +208,7 @@ void loop() {
   static unsigned long lastPublishTime = 0;
   unsigned long now = millis();
   if (now - lastPublishTime > 10000) {
-    readAndPublishSensorData();
+    mqttPublish();
     lastPublishTime = now;
   }
 }
