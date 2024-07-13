@@ -5,13 +5,13 @@
 #include <string>
 
 
-#define LED1 D1;
-#define LED23 D2;
-#define FOG1 D3;
-#define FOG23 D4;
-#define FUME D5;
+#define LED1 D1
+#define LED23 D2
+#define FOG1 D3
+#define FOG23 D4
+#define FUME D5
 
-#define RECV_PIN D6;
+#define RECV_PIN D6
 
 
 // WiFi settings
@@ -190,12 +190,12 @@ void mqttPublish(){
   // Print and publish the temperature data
   Serial.print("Publishing temperature data: ");
   Serial.println(tempBuffer);
-  client.publish(mqtt_topic, tempBuffer);
+  mqtt_client.publish(mqtt_topic, tempBuffer);
   
   // Print and publish the humidity data
   Serial.print("Publishing humidity data: ");
   Serial.println(humBuffer);
-  client.publish(mqtt_topic, humBuffer);
+  mqtt_client.publish(mqtt_topic, humBuffer);
   
   // Wait for a few seconds before publishing again
   delay(5000);

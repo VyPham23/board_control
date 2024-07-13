@@ -1,7 +1,10 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRutils.h>
 
-#define RECV_PIN D4;
+#define RECV_PIN D4
 
 // WiFi settings
 const char *ssid = "Thanh Hai t2";
@@ -64,7 +67,7 @@ void decodeAndPublishIRData() {
     char msg[50];
     sprintf(msg, "0x%X", results.value);
     Serial.println(msg);
-    client.publish(mqtt_topic, msg);
+    mqtt_client.publish(mqtt_topic, msg);
     irrecv.resume(); // Receive the next value
   }
 }
